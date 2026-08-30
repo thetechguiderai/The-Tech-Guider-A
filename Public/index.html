@@ -1,1 +1,1306 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Build Web — The Tech Guider AI</title><link rel="stylesheet" href="./style.css"></head><body class="app"><main class="builder-page"><a class="brand" href="./chat.html"><img src="./logo.png" class="logo-img" alt="logo">The Tech Guider <span> / Build</span></a><section class="builder-hero"><p class="eyebrow">WEB BUILDER</p><h1>Describe the website you want to make.</h1><p>Get a responsive HTML, CSS and JavaScript starter you can continue editing in Code.</p><textarea id="buildPrompt" placeholder="Example: Create a premium portfolio for a freelance web designer with a dark hero, services, projects and contact form."></textarea><div><button class="btn btn-primary" id="buildBtn">Generate website starter →</button><a class="btn btn-ghost" href="./code.html">Open Code workspace</a></div></section><section class="builder-result" id="buildResult" hidden><div class="result-head"><b>Generated starter</b><button class="btn btn-ghost" id="sendToCode">Open in Code</button></div><pre><code id="buildCode"></code></pre></section></main><script>const p=document.querySelector('#buildPrompt'),b=document.querySelector('#buildBtn'),r=document.querySelector('#buildResult'),c=document.querySelector('#buildCode');b.onclick=async()=>{if(!p.value.trim())return;p.disabled=true;b.textContent='Designing…';try{const q=`Create a complete single-file responsive website. Return only HTML with embedded CSS and JavaScript. User request: ${p.value}`;const x=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({message:q,modelId:'guider-flash'})});const raw=await x.text();const d=raw?JSON.parse(raw):{};if(!x.ok)throw Error(d.error||'Generator is unavailable.');c.textContent=d.reply.replace(/^```html\s*|```$/g,'');r.hidden=false;localStorage.setItem('tg_code_draft',c.textContent)}catch(e){alert(e.message)}finally{p.disabled=false;b.textContent='Generate website starter →'}};document.querySelector('#sendToCode').onclick=()=>location.href='./code.html';</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#050505">
+  <meta name="description" content="The Tech Guider AI — Your AI thinking partner for chat, code, creation, research and projects.">
+  <title>The Tech Guider AI — Your AI thinking partner</title>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    :root{
+      --black:#050505;
+      --surface:#0b0b0b;
+      --surface-2:#111111;
+      --surface-3:#171717;
+      --line:#252525;
+      --line-soft:#1a1a1a;
+      --white:#fff;
+      --muted:#9b9b9b;
+      --muted-2:#6f6f6f;
+      --radius:24px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      background:var(--black);
+      color:var(--white);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      overflow-x:hidden;
+    }
+
+    a{text-decoration:none;color:inherit}
+    button{font:inherit}
+
+    .tg-landing{
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 50% -10%,rgba(255,255,255,.06),transparent 34%),
+        var(--black);
+    }
+
+    .tg-nav{
+      position:sticky;
+      top:0;
+      z-index:100;
+      border-bottom:1px solid rgba(255,255,255,.07);
+      background:rgba(5,5,5,.82);
+      backdrop-filter:blur(20px);
+    }
+
+    .tg-nav-inner{
+      width:min(1180px,calc(100% - 40px));
+      min-height:72px;
+      margin:auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:24px;
+    }
+
+    .tg-brand{
+      display:flex;
+      align-items:center;
+      gap:11px;
+      font-size:15px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .tg-brand img{
+      width:34px;
+      height:34px;
+      border-radius:10px;
+      object-fit:cover;
+    }
+
+    .tg-nav-links{
+      display:flex;
+      align-items:center;
+      gap:28px;
+      color:#a7a7a7;
+      font-size:14px;
+    }
+
+    .tg-nav-links a{
+      transition:.2s ease;
+    }
+
+    .tg-nav-links a:hover{color:#fff}
+
+    .tg-nav-actions{
+      display:flex;
+      align-items:center;
+      gap:9px;
+    }
+
+    .tg-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:43px;
+      padding:0 18px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      transition:transform .2s ease,border-color .2s ease,background .2s ease;
+      cursor:pointer;
+      font-size:14px;
+      font-weight:650;
+    }
+
+    .tg-btn:hover{
+      transform:translateY(-2px);
+      border-color:#444;
+    }
+
+    .tg-btn-dark{background:#101010;color:#fff}
+    .tg-btn-light{background:#fff;color:#050505;border-color:#fff}
+
+    .tg-btn-disabled{
+      opacity:.45;
+      cursor:not-allowed;
+      pointer-events:none;
+    }
+    .tg-btn-disabled:hover{
+      transform:none;
+      border-color:var(--line);
+    }
+
+    .tg-hero{
+      width:min(1180px,calc(100% - 40px));
+      margin:auto;
+      padding:105px 0 70px;
+      text-align:center;
+    }
+
+    .tg-eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 11px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      color:#aaa;
+      background:#0b0b0b;
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .tg-dot{
+      width:6px;
+      height:6px;
+      background:#fff;
+      border-radius:50%;
+      box-shadow:0 0 14px rgba(255,255,255,.5);
+    }
+
+    .tg-hero h1{
+      max-width:850px;
+      margin:24px auto 20px;
+      font-size:clamp(48px,8vw,88px);
+      line-height:.96;
+      letter-spacing:-.065em;
+      font-weight:800;
+    }
+
+    .tg-hero h1 span{
+      color:#777;
+    }
+
+    .tg-hero-text{
+      max-width:650px;
+      margin:0 auto;
+      color:#929292;
+      font-size:18px;
+      line-height:1.65;
+    }
+
+    .tg-hero-actions{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      margin-top:30px;
+      flex-wrap:wrap;
+    }
+
+    .tg-product-wrap{
+      margin:72px auto 0;
+      max-width:1080px;
+      text-align:left;
+    }
+
+    .tg-product{
+      position:relative;
+      border:1px solid #292929;
+      border-radius:28px;
+      background:#0a0a0a;
+      box-shadow:0 35px 100px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+
+    .tg-window-bar{
+      height:52px;
+      padding:0 18px;
+      display:flex;
+      align-items:center;
+      border-bottom:1px solid #202020;
+      background:#0d0d0d;
+    }
+
+    .tg-window-dots{
+      display:flex;
+      gap:6px;
+    }
+
+    .tg-window-dots i{
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#454545;
+    }
+
+    .tg-window-title{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      color:#686868;
+      font-size:12px;
+    }
+
+    .tg-product-body{
+      min-height:480px;
+      display:grid;
+      grid-template-columns:220px 1fr;
+    }
+
+    .tg-mini-sidebar{
+      border-right:1px solid #202020;
+      padding:17px;
+      background:#080808;
+    }
+
+    .tg-mini-brand{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      margin-bottom:25px;
+      font-size:12px;
+      font-weight:700;
+    }
+
+    .tg-mini-brand img{
+      width:27px;
+      height:27px;
+      border-radius:8px;
+    }
+
+    .tg-mini-new{
+      width:100%;
+      padding:10px;
+      border:1px solid #292929;
+      border-radius:9px;
+      background:#111;
+      color:#ddd;
+      font-size:11px;
+      text-align:left;
+      margin-bottom:20px;
+    }
+
+    .tg-mini-label{
+      color:#555;
+      font-size:9px;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      margin:15px 0 9px;
+    }
+
+    .tg-mini-chat{
+      padding:8px 9px;
+      border-radius:7px;
+      color:#777;
+      font-size:10px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .tg-mini-chat.active{
+      color:#ddd;
+      background:#151515;
+    }
+
+    .tg-preview-chat{
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      padding:45px 8%;
+      background:
+        radial-gradient(circle at 50% 35%,rgba(255,255,255,.045),transparent 35%),
+        #0b0b0b;
+    }
+
+    .tg-preview-model{
+      position:absolute;
+      top:18px;
+      left:50%;
+      transform:translateX(-50%);
+      padding:7px 12px;
+      border:1px solid #252525;
+      border-radius:9px;
+      color:#999;
+      font-size:10px;
+      background:#101010;
+    }
+
+    .tg-message{
+      max-width:680px;
+      margin:8px auto;
+      width:100%;
+    }
+
+    .tg-message-user{
+      display:flex;
+      justify-content:flex-end;
+    }
+
+    .tg-message-user span{
+      max-width:68%;
+      padding:12px 15px;
+      background:#1a1a1a;
+      border:1px solid #252525;
+      border-radius:15px 15px 4px 15px;
+      color:#ddd;
+      font-size:12px;
+      line-height:1.5;
+    }
+
+    .tg-message-ai{
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+    }
+
+    .tg-ai-icon{
+      flex:0 0 25px;
+      height:25px;
+      display:grid;
+      place-items:center;
+      border:1px solid #333;
+      border-radius:8px;
+      background:#111;
+      font-size:9px;
+      font-weight:800;
+    }
+
+    .tg-message-ai p{
+      margin:0;
+      color:#aaa;
+      font-size:12px;
+      line-height:1.7;
+    }
+
+    .tg-code-preview{
+      margin-top:13px;
+      padding:13px;
+      border:1px solid #252525;
+      border-radius:10px;
+      background:#080808;
+      color:#888;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      font-size:10px;
+      line-height:1.65;
+    }
+
+    .tg-composer-preview{
+      position:absolute;
+      bottom:22px;
+      left:8%;
+      right:8%;
+      min-height:49px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:7px 8px;
+      border:1px solid #292929;
+      border-radius:15px;
+      background:rgba(17,17,17,.94);
+    }
+
+    .tg-composer-preview span{
+      color:#555;
+      font-size:11px;
+      flex:1;
+    }
+
+    .tg-composer-icon{
+      width:32px;
+      height:32px;
+      display:grid;
+      place-items:center;
+      border-radius:9px;
+      color:#888;
+      background:#0c0c0c;
+      font-size:13px;
+    }
+
+    .tg-send{
+      background:#fff;
+      color:#000;
+    }
+
+    .tg-section{
+      width:min(1180px,calc(100% - 40px));
+      margin:auto;
+      padding:105px 0;
+    }
+
+    .tg-section-head{
+      display:flex;
+      align-items:end;
+      justify-content:space-between;
+      gap:30px;
+      margin-bottom:35px;
+    }
+
+    .tg-section-head h2{
+      max-width:650px;
+      margin:0;
+      font-size:clamp(34px,5vw,56px);
+      line-height:1;
+      letter-spacing:-.045em;
+    }
+
+    .tg-section-head p{
+      max-width:420px;
+      margin:0;
+      color:#777;
+      line-height:1.65;
+      font-size:14px;
+    }
+
+    .tg-feature-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+    }
+
+    .tg-feature{
+      min-height:235px;
+      padding:25px;
+      border:1px solid #202020;
+      border-radius:20px;
+      background:linear-gradient(145deg,#101010,#090909);
+      transition:.25s ease;
+    }
+
+    .tg-feature:hover{
+      transform:translateY(-4px);
+      border-color:#3a3a3a;
+    }
+
+    .tg-feature-icon{
+      width:39px;
+      height:39px;
+      display:grid;
+      place-items:center;
+      border:1px solid #292929;
+      border-radius:11px;
+      background:#151515;
+      color:#ddd;
+      font-size:14px;
+    }
+
+    .tg-feature h3{
+      margin:32px 0 9px;
+      font-size:19px;
+    }
+
+    .tg-feature p{
+      margin:0;
+      color:#747474;
+      font-size:13px;
+      line-height:1.65;
+    }
+
+    .tg-models{
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      gap:10px;
+    }
+
+    .tg-model{
+      position:relative;
+      min-height:210px;
+      padding:20px;
+      border:1px solid #202020;
+      border-radius:18px;
+      background:#0b0b0b;
+      transition:.25s ease;
+    }
+
+    .tg-model:hover{
+      border-color:#3a3a3a;
+      transform:translateY(-3px);
+    }
+
+    .tg-model-top{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .tg-model-badge{
+      padding:4px 7px;
+      border:1px solid #292929;
+      border-radius:6px;
+      color:#888;
+      font-size:9px;
+    }
+
+    .tg-model-badge-paid{
+      color:#050505;
+      background:#fff;
+      border-color:#fff;
+      font-weight:700;
+    }
+
+    .tg-model h3{
+      margin:34px 0 8px;
+      font-size:17px;
+    }
+
+    .tg-model p{
+      color:#707070;
+      font-size:12px;
+      line-height:1.6;
+      margin:0;
+    }
+
+    .tg-model-lock{
+      display:inline-block;
+      margin-top:12px;
+      padding:6px 10px;
+      border:1px solid #333;
+      border-radius:8px;
+      color:#ccc;
+      font-size:11px;
+      font-weight:650;
+    }
+
+    .tg-model-lock:hover{
+      border-color:#fff;
+      color:#fff;
+    }
+
+    .tg-how{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      border:1px solid #202020;
+      border-radius:23px;
+      overflow:hidden;
+      background:#0a0a0a;
+    }
+
+    .tg-step{
+      padding:35px;
+      min-height:220px;
+      border-right:1px solid #202020;
+    }
+
+    .tg-step:last-child{border-right:0}
+
+    .tg-step-number{
+      color:#555;
+      font-size:11px;
+      letter-spacing:.1em;
+    }
+
+    .tg-step h3{
+      margin:45px 0 10px;
+      font-size:21px;
+    }
+
+    .tg-step p{
+      margin:0;
+      color:#727272;
+      font-size:13px;
+      line-height:1.6;
+    }
+
+    .tg-pricing-grid{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:12px;
+    }
+
+    .tg-price-card{
+      position:relative;
+      padding:24px;
+      min-height:390px;
+      display:flex;
+      flex-direction:column;
+      border:1px solid #222;
+      border-radius:21px;
+      background:#0b0b0b;
+    }
+
+    .tg-price-card.recommended{
+      background:#111;
+      border-color:#555;
+      box-shadow:0 20px 70px rgba(255,255,255,.035);
+    }
+
+    .tg-price-card.business{
+      background:linear-gradient(160deg,#131313,#0a0a0a);
+      border-color:#3d3d3d;
+    }
+
+    .tg-recommended{
+      position:absolute;
+      top:15px;
+      right:15px;
+      padding:5px 8px;
+      border-radius:7px;
+      background:#fff;
+      color:#000;
+      font-size:9px;
+      font-weight:700;
+    }
+
+    .tg-price-card h3{
+      margin:0;
+      font-size:20px;
+    }
+
+    .tg-price{
+      margin:23px 0 4px;
+      font-size:32px;
+      font-weight:750;
+      letter-spacing:-.04em;
+    }
+
+    .tg-price small{
+      color:#666;
+      font-size:11px;
+      font-weight:400;
+    }
+
+    .tg-price-alt{
+      margin:0 0 8px;
+      color:#767676;
+      font-size:11px;
+    }
+
+    .tg-price-desc{
+      color:#707070;
+      min-height:42px;
+      font-size:12px;
+      line-height:1.55;
+    }
+
+    .tg-price-list{
+      list-style:none;
+      padding:0;
+      margin:25px 0;
+      display:grid;
+      gap:11px;
+      flex:1;
+    }
+
+    .tg-price-list li{
+      color:#8c8c8c;
+      font-size:12px;
+    }
+
+    .tg-price-list li::before{
+      content:"✓";
+      color:#ddd;
+      margin-right:8px;
+    }
+
+    .tg-download{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:12px;
+    }
+
+    .tg-download-card{
+      padding:28px;
+      min-height:180px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      border:1px solid #202020;
+      border-radius:20px;
+      background:linear-gradient(145deg,#101010,#090909);
+    }
+
+    .tg-download-card h3{
+      margin:0 0 8px;
+      font-size:19px;
+    }
+
+    .tg-download-card p{
+      margin:0 0 18px;
+      color:#747474;
+      font-size:13px;
+      line-height:1.6;
+    }
+
+    .tg-faq{
+      max-width:850px;
+      margin:auto;
+      border-top:1px solid #202020;
+    }
+
+    .tg-faq details{
+      border-bottom:1px solid #202020;
+      padding:21px 0;
+    }
+
+    .tg-faq summary{
+      cursor:pointer;
+      list-style:none;
+      font-size:15px;
+      font-weight:600;
+    }
+
+    .tg-faq summary::-webkit-details-marker{display:none}
+
+    .tg-faq p{
+      max-width:700px;
+      color:#737373;
+      font-size:13px;
+      line-height:1.7;
+      margin:13px 0 0;
+    }
+
+    .tg-final{
+      width:min(1180px,calc(100% - 40px));
+      margin:20px auto 90px;
+      padding:75px 30px;
+      text-align:center;
+      border:1px solid #252525;
+      border-radius:28px;
+      background:
+        radial-gradient(circle at center,rgba(255,255,255,.055),transparent 55%),
+        #0b0b0b;
+    }
+
+    .tg-final h2{
+      max-width:700px;
+      margin:0 auto 16px;
+      font-size:clamp(35px,6vw,65px);
+      letter-spacing:-.055em;
+      line-height:1;
+    }
+
+    .tg-final p{
+      max-width:520px;
+      margin:0 auto;
+      color:#777;
+      line-height:1.65;
+      font-size:14px;
+    }
+
+    .tg-footer{
+      border-top:1px solid #191919;
+      padding:30px 0;
+    }
+
+    .tg-footer-inner{
+      width:min(1180px,calc(100% - 40px));
+      margin:auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      color:#555;
+      font-size:11px;
+    }
+
+    .tg-footer-links{
+      display:flex;
+      gap:20px;
+    }
+
+    @media(max-width:1100px){
+      .tg-models{grid-template-columns:repeat(3,1fr)}
+      .tg-pricing-grid{grid-template-columns:repeat(3,1fr)}
+    }
+
+    @media(max-width:900px){
+      .tg-nav-links{display:none}
+      .tg-product-body{grid-template-columns:1fr}
+      .tg-mini-sidebar{display:none}
+      .tg-feature-grid{grid-template-columns:repeat(2,1fr)}
+      .tg-models{grid-template-columns:repeat(2,1fr)}
+      .tg-pricing-grid{grid-template-columns:repeat(2,1fr)}
+      .tg-download{grid-template-columns:1fr}
+    }
+
+    @media(max-width:620px){
+      .tg-nav-inner,
+      .tg-hero,
+      .tg-section,
+      .tg-footer-inner,
+      .tg-final{width:min(100% - 28px,1180px)}
+
+      .tg-nav-actions .tg-btn-dark{display:none}
+      .tg-hero{padding-top:75px}
+      .tg-hero h1{font-size:48px}
+      .tg-hero-text{font-size:15px}
+      .tg-product-wrap{margin-top:50px}
+      .tg-product{border-radius:18px}
+      .tg-product-body{min-height:540px}
+      .tg-preview-chat{padding:35px 18px}
+      .tg-composer-preview{left:18px;right:18px}
+      .tg-message-user span{max-width:85%}
+      .tg-section{padding:75px 0}
+      .tg-section-head{display:block}
+      .tg-section-head p{margin-top:15px}
+      .tg-feature-grid,
+      .tg-models,
+      .tg-pricing-grid{grid-template-columns:1fr}
+      .tg-how{grid-template-columns:1fr}
+      .tg-step{border-right:0;border-bottom:1px solid #202020}
+      .tg-step:last-child{border-bottom:0}
+      .tg-price-card{min-height:350px}
+      .tg-footer-inner{align-items:flex-start;flex-direction:column}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="tg-landing">
+
+    <nav class="tg-nav">
+      <div class="tg-nav-inner">
+        <a class="tg-brand" href="./index.html">
+          <img src="./logo.png" alt="The Tech Guider AI">
+          <span>The Tech Guider AI</span>
+        </a>
+
+        <div class="tg-nav-links">
+          <a href="#features">Features</a>
+          <a href="#models">Models</a>
+          <a href="#how">How it works</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#download">Download</a>
+          <a href="#faq">FAQ</a>
+        </div>
+
+        <div class="tg-nav-actions">
+          <a class="tg-btn tg-btn-dark" href="./login.html">Log in</a>
+          <a class="tg-btn tg-btn-light" href="./signup.html">Get started</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+
+      <section class="tg-hero">
+        <div class="tg-eyebrow">
+          <i class="tg-dot"></i>
+          The Tech Guider AI
+        </div>
+
+        <h1>Your AI thinking <span>partner.</span></h1>
+
+        <p class="tg-hero-text">
+          Think, create, code, research and build with an AI workspace designed
+          to keep powerful tools in one simple place.
+        </p>
+
+        <div class="tg-hero-actions">
+          <a class="tg-btn tg-btn-light" href="./signup.html">Start creating</a>
+          <a class="tg-btn tg-btn-dark" href="./chat.html">Open AI workspace</a>
+        </div>
+
+        <div class="tg-product-wrap">
+          <div class="tg-product">
+            <div class="tg-window-bar">
+              <div class="tg-window-dots">
+                <i></i><i></i><i></i>
+              </div>
+              <div class="tg-window-title">The Tech Guider AI</div>
+            </div>
+
+            <div class="tg-product-body">
+              <aside class="tg-mini-sidebar">
+                <div class="tg-mini-brand">
+                  <img src="./logo.png" alt="">
+                  The Tech Guider AI
+                </div>
+
+                <div class="tg-mini-new">＋ New Chat</div>
+
+                <div class="tg-mini-label">Recent</div>
+                <div class="tg-mini-chat active">Build a modern website</div>
+                <div class="tg-mini-chat">Explain this JavaScript</div>
+                <div class="tg-mini-chat">Research AI tools</div>
+                <div class="tg-mini-chat">Create a project plan</div>
+
+                <div class="tg-mini-label">Workspace</div>
+                <div class="tg-mini-chat">Code</div>
+                <div class="tg-mini-chat">Explore</div>
+                <div class="tg-mini-chat">Settings</div>
+              </aside>
+
+              <div class="tg-preview-chat">
+                <div class="tg-preview-model">Guider Flash · Ready</div>
+
+                <div class="tg-message tg-message-user">
+                  <span>Build me a clean landing page for a technology product.</span>
+                </div>
+
+                <div class="tg-message tg-message-ai">
+                  <div class="tg-ai-icon">TG</div>
+                  <div>
+                    <p>
+                      I can help you plan the structure, write the interface,
+                      generate the code and refine it with you.
+                    </p>
+
+                    <div class="tg-code-preview">
+                      &lt;section class="hero"&gt;<br>
+                      &nbsp;&nbsp;&lt;h1&gt;Build something better.&lt;/h1&gt;<br>
+                      &nbsp;&nbsp;&lt;p&gt;A focused product experience.&lt;/p&gt;<br>
+                      &lt;/section&gt;
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tg-composer-preview">
+                  <div class="tg-composer-icon">＋</div>
+                  <span>Message The Tech Guider AI...</span>
+                  <div class="tg-composer-icon">◉</div>
+                  <div class="tg-composer-icon tg-send">↑</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="tg-section" id="features">
+        <div class="tg-section-head">
+          <h2>One workspace.<br>Many ways to create.</h2>
+          <p>
+            From a quick question to a complete development workflow,
+            The Tech Guider AI keeps your work focused and connected.
+          </p>
+        </div>
+
+        <div class="tg-feature-grid">
+          <article class="tg-feature">
+            <div class="tg-feature-icon">✦</div>
+            <h3>Chat</h3>
+            <p>Ask questions, brainstorm ideas and have focused conversations with your AI.</p>
+          </article>
+
+          <article class="tg-feature">
+            <div class="tg-feature-icon">&lt;/&gt;</div>
+            <h3>Code</h3>
+            <p>Write, explain, debug and improve code with downloadable development-ready output.</p>
+          </article>
+
+          <article class="tg-feature">
+            <div class="tg-feature-icon">◇</div>
+            <h3>Create</h3>
+            <p>Turn ideas into content, designs, images and practical creative output.</p>
+          </article>
+
+          <article class="tg-feature">
+            <div class="tg-feature-icon">⌕</div>
+            <h3>Research</h3>
+            <p>Explore information, compare ideas and organize useful findings into clear answers.</p>
+          </article>
+
+          <article class="tg-feature">
+            <div class="tg-feature-icon">▦</div>
+            <h3>Projects</h3>
+            <p>Work through larger tasks with structured conversations and development workflows.</p>
+          </article>
+
+          <article class="tg-feature">
+            <div class="tg-feature-icon">↯</div>
+            <h3>Fast</h3>
+            <p>Use lightweight AI experiences when you need a quick answer without unnecessary complexity.</p>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="tg-section" id="models">
+        <div class="tg-section-head">
+          <h2>Choose the right<br>Guider for the job.</h2>
+          <p>
+            Different workflows need different levels of capability.
+            Pick the model that matches what you are trying to accomplish.
+          </p>
+        </div>
+
+        <div class="tg-models">
+          <article class="tg-model">
+            <div class="tg-model-top">
+              <span class="tg-model-badge">FREE</span>
+              <span class="tg-model-badge">FAST</span>
+            </div>
+            <h3>Guider Flash</h3>
+            <p>Fast everyday AI for questions, writing, ideas and general tasks.</p>
+          </article>
+
+          <article class="tg-model">
+            <div class="tg-model-top">
+              <span class="tg-model-badge">PRO</span>
+            </div>
+            <h3>Guider Pro</h3>
+            <p>Advanced chat, coding and image-generation workflows for serious use.</p>
+          </article>
+
+          <article class="tg-model">
+            <div class="tg-model-top">
+              <span class="tg-model-badge">CODE</span>
+            </div>
+            <h3>Guider Go</h3>
+            <p>Focused on coding, development and longer project workflows.</p>
+          </article>
+
+          <article class="tg-model">
+            <div class="tg-model-top">
+              <span class="tg-model-badge">CONTENT</span>
+            </div>
+            <h3>Guider Plus</h3>
+            <p>Built for resource discovery, content, branding and creative assistance.</p>
+          </article>
+
+          <article class="tg-model">
+            <div class="tg-model-top">
+              <span class="tg-model-badge">CONTENT</span>
+            </div>
+            <h3>Guider Plus Max</h3>
+            <p>Advanced Content capabilities for heavier creative and research projects.</p>
+          </article>
+
+          <article class="tg-model">
+            <div class="tg-model-top">
+              <span class="tg-model-badge tg-model-badge-paid">PAID</span>
+              <span class="tg-model-badge">BUSINESS</span>
+            </div>
+            <h3>Guider GPT</h3>
+            <p>Our most capable model, built for advanced reasoning and business-grade work.</p>
+            <a class="tg-model-lock" href="./signup.html">Sign up to get GPT</a>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="tg-section" id="how">
+        <div class="tg-section-head">
+          <h2>From thought<br>to finished work.</h2>
+          <p>
+            Keep the process simple. Ask what you need, let AI work through it,
+            then turn the result into something useful.
+          </p>
+        </div>
+
+        <div class="tg-how">
+          <article class="tg-step">
+            <span class="tg-step-number">01 — ASK</span>
+            <h3>Tell it what you need.</h3>
+            <p>Start naturally with a question, idea, problem, file or project.</p>
+          </article>
+
+          <article class="tg-step">
+            <span class="tg-step-number">02 — THINK</span>
+            <h3>AI works through it.</h3>
+            <p>Choose the Guider model and tools that fit the task.</p>
+          </article>
+
+          <article class="tg-step">
+            <span class="tg-step-number">03 — CREATE</span>
+            <h3>Turn ideas into output.</h3>
+            <p>Get answers, code, content, research or creative results you can use.</p>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="tg-section" id="pricing">
+        <div class="tg-section-head">
+          <h2>Simple plans.<br>More capability.</h2>
+          <p>
+            Start free and upgrade when your workflow needs more power.
+            Final pricing and entitlement rules are controlled by the platform.
+          </p>
+        </div>
+
+        <div class="tg-pricing-grid">
+          <article class="tg-price-card">
+            <h3>Free</h3>
+            <div class="tg-price">PKR 0 <small>/ month</small></div>
+            <div class="tg-price-desc">A simple way to start exploring The Tech Guider AI.</div>
+
+            <ul class="tg-price-list">
+              <li>Guider Flash</li>
+              <li>Basic AI chat</li>
+              <li>Limited usage</li>
+              <li>Guest access available</li>
+            </ul>
+
+            <a class="tg-btn tg-btn-dark" href="./signup.html">Get started</a>
+          </article>
+
+          <article class="tg-price-card">
+            <h3>Plus</h3>
+            <div class="tg-price">PKR 500 <small>/ month</small></div>
+            <div class="tg-price-desc">More creative and resource-focused capabilities.</div>
+
+            <ul class="tg-price-list">
+              <li>Guider Plus</li>
+              <li>Resource finding</li>
+              <li>Content assistance</li>
+              <li>Branding assistance</li>
+            </ul>
+
+            <a class="tg-btn tg-btn-dark" href="./plans.html">View plan</a>
+          </article>
+
+          <article class="tg-price-card recommended">
+            <div class="tg-recommended">RECOMMENDED</div>
+            <h3>Pro</h3>
+            <div class="tg-price">PKR 2,000 <small>/ month</small></div>
+            <div class="tg-price-desc">Advanced AI for demanding everyday work.</div>
+
+            <ul class="tg-price-list">
+              <li>Guider Pro</li>
+              <li>Advanced chat</li>
+              <li>Coding workflows</li>
+              <li>Image generation</li>
+            </ul>
+
+            <a class="tg-btn tg-btn-light" href="./plans.html">Upgrade to Pro</a>
+          </article>
+
+          <article class="tg-price-card">
+            <h3>Content</h3>
+            <div class="tg-price">PKR 1,000 <small>/ month</small></div>
+            <div class="tg-price-desc">Advanced Content capabilities for heavier projects.</div>
+
+            <ul class="tg-price-list">
+              <li>Guider Plus Max</li>
+              <li>Heavy projects</li>
+              <li>Advanced Content tools</li>
+              <li>Priority workflows</li>
+            </ul>
+
+            <a class="tg-btn tg-btn-dark" href="./plans.html">View plan</a>
+          </article>
+
+          <article class="tg-price-card business">
+            <h3>Business</h3>
+            <div class="tg-price">PKR 3,000 <small>/ month</small></div>
+            <div class="tg-price-alt">or PKR 6,000 / year</div>
+            <div class="tg-price-desc">Premium, business-focused access for teams.</div>
+
+            <ul class="tg-price-list">
+              <li>Up to 10 members</li>
+              <li>Unlimited usage</li>
+              <li>Guider GPT access</li>
+              <li>Business-grade capabilities</li>
+            </ul>
+
+            <a class="tg-btn tg-btn-light" href="./plans.html">Upgrade to Business</a>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="tg-section" id="download">
+        <div class="tg-section-head">
+          <h2>Take it with<br>you.</h2>
+          <p>
+            Get The Tech Guider AI on your desktop, with mobile on the way.
+          </p>
+        </div>
+
+        <div class="tg-download">
+          <article class="tg-download-card">
+            <div>
+              <h3>Windows</h3>
+              <p>Install the desktop app for a faster, native AI workspace.</p>
+            </div>
+            <a class="tg-btn tg-btn-light" href="#">Download for Windows</a>
+          </article>
+
+          <article class="tg-download-card">
+            <div>
+              <h3>Android</h3>
+              <p>The mobile app is on its way. Check back soon.</p>
+            </div>
+            <span class="tg-btn tg-btn-dark tg-btn-disabled" aria-disabled="true">Android — Coming Soon</span>
+          </article>
+        </div>
+      </section>
+
+
+      <section class="tg-section" id="faq">
+        <div class="tg-section-head">
+          <h2>Questions,<br>answered.</h2>
+          <p>Everything you need to know before getting started.</p>
+        </div>
+
+        <div class="tg-faq">
+          <details open>
+            <summary>What is The Tech Guider AI?</summary>
+            <p>
+              The Tech Guider AI is an AI workspace for conversation, coding,
+              research, creative work and projects through different Guider models.
+            </p>
+          </details>
+
+          <details>
+            <summary>Can I use it without an account?</summary>
+            <p>
+              Yes. Guest users can access the limited Guider Offline experience.
+              Account-based features require authentication.
+            </p>
+          </details>
+
+          <details>
+            <summary>Which model should I use?</summary>
+            <p>
+              Guider Flash is designed for everyday tasks, Guider Pro for advanced
+              general work, Guider Go for coding and projects, Guider Plus and
+              Guider Plus Max for Content workflows, and Guider GPT for advanced,
+              business-grade needs.
+            </p>
+          </details>
+
+          <details>
+            <summary>Is Guider GPT free?</summary>
+            <p>
+              No. Guider GPT is a paid model. Sign up and choose a plan that
+              includes GPT access, such as Business, to unlock it.
+            </p>
+          </details>
+
+          <details>
+            <summary>Can I generate images?</summary>
+            <p>
+              Image generation is available where your account and selected model
+              have the required entitlement and provider configuration.
+            </p>
+          </details>
+
+          <details>
+            <summary>Are my conversations saved?</summary>
+            <p>
+              Authenticated conversations can be stored through the platform's
+              conversation system. Guest usage is intentionally more limited.
+            </p>
+          </details>
+        </div>
+      </section>
+
+
+      <section class="tg-final">
+        <h2>Start with an idea.</h2>
+        <p>
+          Ask a question, build something, solve a problem or start your next project
+          with The Tech Guider AI.
+        </p>
+
+        <div class="tg-hero-actions">
+          <a class="tg-btn tg-btn-light" href="./signup.html">Create your account</a>
+          <a class="tg-btn tg-btn-dark" href="./chat.html">Try the workspace</a>
+        </div>
+      </section>
+
+    </main>
+
+
+    <footer class="tg-footer">
+      <div class="tg-footer-inner">
+        <div>© 2026 The Tech Guider AI. All rights reserved.</div>
+
+        <div class="tg-footer-links">
+          <a href="./plans.html">Plans</a>
+          <a href="./login.html">Login</a>
+          <a href="./signup.html">Sign up</a>
+          <a href="./chat.html">AI Workspace</a>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+</body>
+</html>
