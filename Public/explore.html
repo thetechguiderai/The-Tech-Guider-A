@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore — The Tech Guider AI</title>
+<link rel="icon" href="./logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><img src="./logo.png" class="logo-img" alt="logo">The Tech Guider</div>
+      <input class="search" placeholder="Search here...">
+      <nav class="side-nav">
+        <a href="./chat.html"><span>💬</span> Chat</a>
+        <a href="/"><span>🏠</span> Home</a>
+        <a href="./history.html"><span>🕒</span> History</a>
+        <a href="./explore.html" class="active"><span>🧭</span> Explore</a>
+        <a href="./wallet.html"><span>👛</span> Wallet</a>
+        <a href="./payment-history.html"><span>📄</span> Payment History</a>
+        <a href="./plans.html"><span>📋</span> Plans</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="page-inner">
+        <h1>Explore Models</h1>
+        <div id="modelsGrid" class="quick-cards" style="grid-template-columns:repeat(2,1fr);"></div>
+      </div>
+    </main>
+  </div>
+
+<script>
+async function load() {
+  const grid = document.getElementById("modelsGrid");
+  const res = await fetch("/api/models", { credentials: "include" });
+  const { models } = await res.json();
+  grid.innerHTML = models.map(m => `
+    <div class="quick-card">
+      <strong>${m.name} ${m.locked ? "🔒" : ""}</strong>
+      <span>${m.desc}</span>
+      <div class="meta" style="margin-top:8px;">${m.tier.toUpperCase()}</div>
+    </div>`).join("");
+}
+load();
+</script>
+</body>
+</html>

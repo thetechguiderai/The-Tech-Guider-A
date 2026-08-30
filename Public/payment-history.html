@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment History — The Tech Guider AI</title>
+<link rel="icon" href="./logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><img src="./logo.png" class="logo-img" alt="logo">The Tech Guider</div>
+      <input class="search" placeholder="Search here...">
+      <nav class="side-nav">
+        <a href="/chat.html"><span>💬</span> Chat</a>
+        <a href="/"><span>🏠</span> Home</a>
+        <a href="./history.html"><span>🕒</span> History</a>
+        <a href="./explore.html"><span>🧭</span> Explore</a>
+        <a href="./wallet.html"><span>👛</span> Wallet</a>
+        <a href="./payment-history.html" class="active"><span>📄</span> Payment History</a>
+        <a href="./plans.html"><span>📋</span> Plans</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="page-inner">
+        <h1>Payment History</h1>
+        <div id="payList"><p class="empty-note">Loading…</p></div>
+      </div>
+    </main>
+  </div>
+
+<script>
+async function load() {
+  const list = document.getElementById("payList");
+  try {
+    const res = await fetch("/api/payments", { credentials: "include" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    if (data.payments.length === 0) {
+      list.innerHTML = `<p class="empty-note">No payments yet.</p>`;
+      return;
+    }
+    list.innerHTML = data.payments.map(p => `
+      <div class="list-card">
+        <div><div>${p.plan}</div><div class="meta">${p.created_at}</div></div>
+        <div>PKR ${p.amount} — ${p.status}</div>
+      </div>`).join("");
+  } catch (err) {
+    list.innerHTML = `<p class="empty-note">${err.message || "Sign in to view payment history."}</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "name": "the-tech-guider-ai",
+  "version": "1.0.0",
+  "author": "The Tech Guider AI",
+  "description": "The Tech Guider AI - full-stack AI platform",
+  "type": "module",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "dev": "node server/server.js",
+    "start": "node server/server.js",
+    "desktop": "electron .",
+    "package:msi": "electron-builder --win msi"
+  },
+  "build": {
+    "appId": "com.thetechguider.ai",
+    "productName": "The Tech Guider AI",
+    "directories": {
+      "buildResources": "desktop/build",
+      "output": "C:/tmp/the-tech-guider-ai-release"
+    },
+    "files": [
+      "desktop/**/*",
+      "Server/**/*",
+      "Public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["msi"],
+      "icon": "Public/logo.png"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false,
+      "runAfterFinish": true
+    }
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cookie-parser": "^1.4.6",
+    "nanoid": "^5.0.7"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

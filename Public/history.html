@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>History — The Tech Guider AI</title>
+<link rel="icon" href="./logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><img src="/logo.png" class="logo-img" alt="logo">The Tech Guider</div>
+      <input class="search" placeholder="Search here...">
+      <nav class="side-nav">
+        <a href="./chat.html"><span>💬</span> Chat</a>
+        <a href="/"><span>🏠</span> Home</a>
+        <a href="./history.html" class="active"><span>🕒</span> History</a>
+        <a href="./explore.html"><span>🧭</span> Explore</a>
+        <a href="./wallet.html"><span>👛</span> Wallet</a>
+        <a href="./payment-history.html"><span>📄</span> Payment History</a>
+        <a href="./plans.html"><span>📋</span> Plans</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="page-inner">
+        <h1>Chat History</h1>
+        <div id="historyList"><p class="empty-note">Loading…</p></div>
+      </div>
+    </main>
+  </div>
+
+<script>
+async function load() {
+  const list = document.getElementById("historyList");
+  try {
+    const res = await fetch("/api/conversations", { credentials: "include" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    if (data.conversations.length === 0) {
+      list.innerHTML = `<p class="empty-note">No conversations yet. Start chatting to see your history here.</p>`;
+      return;
+    }
+    list.innerHTML = data.conversations.map(c => `
+      <div class="list-card">
+        <div>
+          <div>${c.title}</div>
+          <div class="meta">${c.model} • ${c.updated_at}</div>
+        </div>
+        <div>
+          <a href="/chat.html?c=${c.id}" class="btn btn-ghost" style="padding:6px 12px;font-size:12px;">Open</a>
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" data-del="${c.id}">Delete</button>
+        </div>
+      </div>`).join("");
+
+    list.querySelectorAll("[data-del]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        await fetch(`/api/conversations/${btn.dataset.del}`, { method: "DELETE", credentials: "include" });
+        load();
+      });
+    });
+  } catch (err) {
+    list.innerHTML = `<p class="empty-note">${err.message || "Sign in to see chat history."}</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

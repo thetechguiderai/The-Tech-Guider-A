@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+.vercel/
+dist/
+build/
+release/
+release-msi/
+*.log
+*.db
+*.db-shm
+*.db-wal

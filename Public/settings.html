@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — The Tech Guider AI</title>
+<link rel="icon" href="./logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><img src="./logo.png" class="logo-img" alt="logo">The Tech Guider</div>
+      <button class="btn btn-ghost btn-block" style="text-align: left; margin-bottom: 10px;" onclick="location.href='./chat.html'">➕ New Chat</button>
+      <nav class="side-nav">
+        <a href="./chat.html"><span>💬</span> Chat</a>
+        <a href="./build.html"><span>🚀</span> Build Web</a>
+        <a href="./settings.html" class="active"><span>⚙</span> Settings</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="page-inner">
+        <h1>Settings</h1>
+        <div id="settingsBox" style="max-width:400px;">
+            <div class="field"><label>Theme</label>
+                <select id="themeSelect" onchange="updateTheme(this.value)">
+                    <option value="dark">Dark Mode</option>
+                    <option value="light">Light Mode (Coming Soon)</option>
+                </select>
+            </div>
+            <div id="userSettings"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+async function load() {
+  const box = document.getElementById("userSettings");
+  try {
+    const res = await fetch("/api/auth/me", { credentials: "include" });
+    const { user } = await res.json();
+    if (!user) { box.innerHTML = `<p class="empty-note">Sign in to manage profile settings.</p>`; return; }
+    box.innerHTML = `
+      <div class="field"><label>Name</label><input id="nameInput" value="${user.name || ""}"></div>
+      <div class="field"><label>Email</label><input value="${user.email}" disabled></div>
+      <div class="field"><label>Plan</label><input value="${user.plan}" disabled></div>
+      <button class="btn btn-primary" id="saveBtn">Save changes</button>
+      <button class="btn btn-ghost" id="logoutBtn" style="margin-top:10px;">Sign Out</button>
+    `;
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+      const name = document.getElementById("nameInput").value.trim();
+      await fetch("/api/auth/me", {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ name }),
+      });
+      alert("Profile saved!");
+    });
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      window.location.href = "/";
+    });
+  } catch {
+    box.innerHTML = `<p class="empty-note">Sign in to manage profile settings.</p>`;
+  }
+}
+function updateTheme(val) { alert("Theme update requested: " + val); }
+load();
+</script>
+</body>
+</html>

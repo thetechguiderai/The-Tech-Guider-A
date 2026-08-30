@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wallet — The Tech Guider AI</title>
+<link rel="icon" href="./logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><img src="./logo.png" class="logo-img" alt="logo">The Tech Guider</div>
+      <input class="search" placeholder="Search here...">
+      <nav class="side-nav">
+        <a href="./chat.html"><span>💬</span> Chat</a>
+        <a href="/"><span>🏠</span> Home</a>
+        <a href="./history.html"><span>🕒</span> History</a>
+        <a href="./explore.html"><span>🧭</span> Explore</a>
+        <a href="./wallet.html" class="active"><span>👛</span> Wallet</a>
+        <a href="./payment-history.html"><span>📄</span> Payment History</a>
+        <a href="./plans.html"><span>📋</span> Plans</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="page-inner">
+        <h1>Wallet</h1>
+        <div id="walletBox"><p class="empty-note">Loading…</p></div>
+      </div>
+    </main>
+  </div>
+
+<script>
+async function load() {
+  const box = document.getElementById("walletBox");
+  try {
+    const res = await fetch("/api/wallet", { credentials: "include" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    box.innerHTML = `
+      <div class="quick-card" style="max-width:320px;">
+        <strong>Credits</strong>
+        <span style="font-size:26px;display:block;margin:8px 0;">${data.credits}</span>
+        <div class="meta">Plan: ${data.plan}</div>
+      </div>
+      <p class="empty-note" style="text-align:left;padding-left:0;">Credits are added when a real payment provider is connected. See Plans to upgrade.</p>
+    `;
+  } catch (err) {
+    box.innerHTML = `<p class="empty-note">${err.message || "Sign in to view your wallet."}</p>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

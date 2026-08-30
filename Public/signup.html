@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — The Tech Guider AI</title>
+<link rel="icon" href="./logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="landing">
+<header class="nav">
+  <a href="/" class="logo"><img src="./logo.png" class="logo-img" alt="logo">The Tech Guider AI</a>
+  <div></div>
+  <div class="nav-actions"><a href="./login.html" class="btn btn-ghost">Sign in</a></div>
+</header>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>Create your account</h1>
+    <p class="auth-sub">Start with The Tech Guider AI for free.</p>
+    <div class="form-error" id="formError" style="display:none;"></div>
+    <form id="signupForm">
+      <div class="field"><label>Name</label><input type="text" name="name" required></div>
+      <div class="field"><label>Email</label><input type="email" name="email" required></div>
+      <div class="field"><label>Password</label><input type="password" name="password" required minlength="8"></div>
+      <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+    </form>
+    <div class="auth-divider"><span>or</span></div>
+    <a class="btn oauth-btn btn-block" href="/api/auth/google"><span>G</span> Continue with Google</a>
+    <p class="auth-alt">Already have an account? <a href="./login.html">Sign in</a></p>
+  </div>
+</div>
+
+<script>
+document.getElementById("signupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errBox = document.getElementById("formError");
+  errBox.style.display = "none";
+  const formData = new FormData(e.target);
+  const dataObj = Object.fromEntries(formData.entries());
+  try {
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dataObj),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || "Failed to sign up");
+    window.location.href = "/chat.html";
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.style.display = "block";
+  }
+});
+</script>
+</body>
+</html>

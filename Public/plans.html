@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plans — The Tech Guider AI</title>
+<link rel="icon" href="./logo.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="landing">
+<header class="nav">
+  <a href="/" class="logo"><img src="./logo.png" class="logo-img" alt="logo">The Tech Guider AI</a>
+  <div></div>
+  <div class="nav-actions"><a href="./chat.html" class="btn btn-ghost">Back to chat</a></div>
+</header>
+
+<section class="section-block">
+  <p class="section-label">PRICING</p>
+  <h2 class="section-title">Plans built for different ways of working.</h2>
+  <div class="plans-grid" id="plansGrid">Loading…</div>
+</section>
+
+<script>
+async function load() {
+  const grid = document.getElementById("plansGrid");
+  const res = await fetch("/api/plans");
+  const { plans } = await res.json();
+  grid.innerHTML = plans.map(p => `
+    <div class="plan-card">
+      <h3>${p.name}</h3>
+      <div class="price">PKR ${p.monthly}<span>/mo</span></div>
+      <div class="price-yearly">or PKR ${p.yearly}/year</div>
+      <p>${p.desc}</p>
+      <button class="btn btn-primary btn-block" data-plan="${p.id}">Choose ${p.name}</button>
+    </div>`).join("");
+
+  grid.querySelectorAll("[data-plan]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ planId: btn.dataset.plan }),
+      });
+      const data = await res.json();
+      alert(data.error || "Redirecting to checkout...");
+    });
+  });
+}
+load();
+</script>
+</body>
+</html>
