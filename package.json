@@ -6,8 +6,8 @@
   "type": "module",
   "main": "desktop/main.cjs",
   "scripts": {
-    "dev": "node server/server.js",
-    "start": "node server/server.js",
+    "dev": "node Server/server.js",
+    "start": "node Server/server.js",
     "desktop": "electron .",
     "package:msi": "electron-builder --win msi"
   },
