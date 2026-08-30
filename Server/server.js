@@ -535,6 +535,8 @@ app.post("/api/image/generate", requireAuth, async (req, res) => {
 // ---------- FRONTEND FALLBACK ----------
 app.get("*", (req, res) => res.sendFile(path.join(publicDir, "index.html")));
 
-app.listen(PORT, () => console.log(`✅ The Tech Guider AI running at http://localhost:${PORT}`));
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => console.log(`✅ The Tech Guider AI running at http://localhost:${PORT}`));
+}
 
 export default app;
