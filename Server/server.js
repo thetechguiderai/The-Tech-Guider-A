@@ -87,6 +87,9 @@ for (const statement of [
   "ALTER TABLE users ADD COLUMN oauth_subject TEXT",
   "ALTER TABLE users ADD COLUMN two_factor_secret TEXT",
   "ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN trial_started_at TEXT",
+  "ALTER TABLE users ADD COLUMN trial_expires_at TEXT",
+  "ALTER TABLE users ADD COLUMN trial_claimed INTEGER DEFAULT 0",
   "ALTER TABLE conversations ADD COLUMN share_id TEXT",
 ]) {
   try { db.exec(statement); } catch { /* Column already exists. */ }
@@ -157,7 +160,16 @@ function getUser(req) {
   } catch { return null; }
 }
 function publicUser(u) {
-  return { id: u.id, email: u.email, name: u.name, role: u.role, plan: u.plan, credits: u.credits };
+  return { id: u.id, email: u.email, name: u.name, role: u.role, plan: u.plan, credits: u.credits,
+    trialExpiresAt: u.trial_expires_at || null,
+    guiderGptTrialActive: hasGuiderGptTrial(u) };
+}
+function hasGuiderGptTrial(user) {
+  return Boolean(user?.trial_expires_at && new Date(user.trial_expires_at).getTime() > Date.now());
+}
+function canUseModel(user, modelId) {
+  if (!user) return false;
+  return user.role === "owner" || planUnlocksModel(user.plan, modelId) || (modelId === "guider-gpt" && hasGuiderGptTrial(user));
 }
 function requireAuth(req, res, next) {
   const user = getUser(req);
@@ -258,7 +270,9 @@ app.get("/api/auth/google/callback", async (req, res) => {
       if (user) db.prepare("UPDATE users SET oauth_provider = ?, oauth_subject = ?, name = COALESCE(name, ?) WHERE id = ?").run("google", profile.sub, profile.name || null, user.id);
       else {
         const id = nanoid();
-        db.prepare("INSERT INTO users (id, email, password_hash, name, oauth_provider, oauth_subject) VALUES (?, ?, ?, ?, ?, ?)")
+        // A trial is claimed once, at the first successful Google registration. It is
+        // stored server-side so clearing browser data cannot create a new trial.
+        db.prepare("INSERT INTO users (id, email, password_hash, name, oauth_provider, oauth_subject, trial_started_at, trial_expires_at, trial_claimed) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now', '+1 month'), 1)")
           .run(id, profile.email.toLowerCase(), "oauth", profile.name || null, "google", profile.sub);
       }
       user = db.prepare("SELECT * FROM users WHERE oauth_provider = ? AND oauth_subject = ?").get("google", profile.sub);
@@ -283,7 +297,7 @@ app.get("/api/models", (req, res) => {
   const user = getUser(req);
   const list = Object.entries(MODELS).map(([id, m]) => {
     let locked = false;
-    if (m.tier === "paid") locked = !(user && (user.role === "owner" || planUnlocksModel(user.plan, id)));
+    if (m.tier === "paid") locked = !canUseModel(user, id);
     if (m.tier === "guest" && user) locked = true;
     return { id, name: m.name, tier: m.tier, desc: m.desc, locked };
   });
@@ -379,9 +393,22 @@ app.get("/api/shared/:shareId", (req, res) => {
 app.get("/api/owner/overview", requireOwner, (req, res) => {
   const totalUsers = db.prepare("SELECT COUNT(*) c FROM users").get().c;
   const totalRequests = db.prepare("SELECT COUNT(*) c FROM ai_requests").get().c;
+  const activeUsers = db.prepare("SELECT COUNT(DISTINCT user_id) c FROM ai_requests WHERE created_at >= datetime('now', '-30 days')").get().c;
+  const newUsers = db.prepare("SELECT COUNT(*) c FROM users WHERE created_at >= datetime('now', '-30 days')").get().c;
+  const trialUsers = db.prepare("SELECT COUNT(*) c FROM users WHERE trial_expires_at > datetime('now')").get().c;
+  const expiredTrials = db.prepare("SELECT COUNT(*) c FROM users WHERE trial_claimed = 1 AND (trial_expires_at IS NULL OR trial_expires_at <= datetime('now'))").get().c;
   const recentUsers = db.prepare("SELECT email, name, role, plan, created_at FROM users ORDER BY created_at DESC LIMIT 20").all();
   const recentRequests = db.prepare("SELECT model, status, created_at FROM ai_requests ORDER BY created_at DESC LIMIT 20").all();
-  res.json({ totalUsers, totalRequests, recentUsers, recentRequests });
+  const planDistribution = db.prepare("SELECT plan, COUNT(*) AS count FROM users GROUP BY plan").all();
+  const modelUsage = db.prepare("SELECT model, COUNT(*) AS count FROM ai_requests GROUP BY model ORDER BY count DESC LIMIT 12").all();
+  res.json({ totalUsers, totalRequests, activeUsers, newUsers, trialUsers, expiredTrials, recentUsers, recentRequests, planDistribution, modelUsage, systemStatus: "operational" });
+});
+
+app.get("/api/owner/users", requireOwner, (req, res) => {
+  const query = String(req.query.q || "").trim();
+  const like = `%${query}%`;
+  const users = db.prepare("SELECT id, email, name, role, plan, trial_started_at, trial_expires_at, trial_claimed, created_at FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT 100").all(like, like);
+  res.json({ users });
 });
 
 // ---------- USAGE LIMIT ----------
@@ -461,7 +488,7 @@ app.post("/api/chat", async (req, res) => {
   const user = getUser(req);
   if (model.tier === "guest" && user) return res.status(400).json({ error: "Guider Offline is for guests only." });
   if (!user && model.tier !== "guest") return res.status(401).json({ error: "Please sign in to use this model. Guests can use Guider Offline." });
-  if (model.tier === "paid" && !(user.role === "owner" || planUnlocksModel(user.plan, modelId))) {
+  if (model.tier === "paid" && !canUseModel(user, modelId)) {
     return res.status(403).json({ error: `${model.name} requires an upgrade. Visit /plans.html.` });
   }
 
@@ -531,6 +558,10 @@ app.post("/api/image/generate", requireAuth, async (req, res) => {
     res.status(502).json({ error: "Image generation failed." });
   }
 });
+
+// An API request must never receive the HTML app shell. OAuth endpoints above are
+// the only API routes that intentionally redirect the browser.
+app.all("/api/*", (req, res) => res.status(404).json({ error: "API endpoint not found." }));
 
 // ---------- FRONTEND FALLBACK ----------
 app.get("*", (req, res) => res.sendFile(path.join(publicDir, "index.html")));
