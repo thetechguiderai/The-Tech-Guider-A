@@ -41,7 +41,8 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "cookie-parser": "^1.4.6",
-    "nanoid": "^5.0.7"
+    "nanoid": "^5.0.7",
+    "serverless-http": "^3.2.0"
   },
   "devDependencies": {
     "electron": "^37.2.6",
