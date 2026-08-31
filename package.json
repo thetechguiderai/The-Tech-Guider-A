@@ -9,14 +9,18 @@
     "dev": "node Server/server.js",
     "start": "node Server/server.js",
     "desktop": "electron .",
-    "package:msi": "electron-builder --win msi"
+    "desktop:build": "node desktop/prepare-production.cjs && electron-builder --win msi --x64",
+    "desktop:msi": "npm run desktop:build",
+    "package:msi": "npm run desktop:msi",
+    "android:sync": "npx cap sync android",
+    "android:build": "cd android && gradlew.bat assembleRelease"
   },
   "build": {
     "appId": "com.thetechguider.ai",
     "productName": "The Tech Guider AI",
     "directories": {
       "buildResources": "desktop/build",
-      "output": "C:/tmp/the-tech-guider-ai-release"
+      "output": "release"
     },
     "files": [
       "desktop/**/*",
@@ -25,7 +29,14 @@
       "package.json"
     ],
     "win": {
-      "target": ["msi"],
+      "target": [
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "Public/logo.png"
     },
     "msi": {
@@ -35,18 +46,22 @@
     }
   },
   "dependencies": {
-    "express": "^4.19.2",
+    "@capacitor/core": "^7.4.3",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "cookie-parser": "^1.4.6",
     "nanoid": "^5.0.7",
     "serverless-http": "^3.2.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
     "electron": "^37.2.6",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.7.3"
   },
   "engines": {
     "node": ">=22.5.0"

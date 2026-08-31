@@ -6,6 +6,12 @@ dist/
 build/
 release/
 release-msi/
+desktop/production-url.json
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
 *.log
 *.db
 *.db-shm
