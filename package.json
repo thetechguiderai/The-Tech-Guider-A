@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node Server/server.js",
     "start": "node Server/server.js",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "desktop": "electron .",
     "desktop:build": "node desktop/prepare-production.cjs && electron-builder --win msi --x64",
     "desktop:msi": "npm run desktop:build",

@@ -16,5 +16,3 @@ android/app/src/main/assets/capacitor.config.json
 *.db
 *.db-shm
 *.db-wal
-# Local Netlify folder
-.netlify
