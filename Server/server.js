@@ -80,6 +80,11 @@ CREATE TABLE IF NOT EXISTS announcement_reads (
   read_at TEXT DEFAULT (datetime('now')),
   PRIMARY KEY (announcement_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS owner_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS owner_model_settings (model_id TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 1, tier TEXT, daily_limit INTEGER);
+CREATE TABLE IF NOT EXISTS owner_plan_settings (plan_id TEXT PRIMARY KEY, monthly INTEGER, yearly INTEGER, enabled INTEGER NOT NULL DEFAULT 1, daily_limit INTEGER, features TEXT);
+CREATE TABLE IF NOT EXISTS owner_audit_log (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, action TEXT NOT NULL, target TEXT, detail TEXT, created_at TEXT DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS owner_assistant_messages (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')));
 `);
 // Non-destructive migration for accounts created through Google OAuth.
 for (const statement of [
@@ -90,6 +95,7 @@ for (const statement of [
   "ALTER TABLE users ADD COLUMN trial_started_at TEXT",
   "ALTER TABLE users ADD COLUMN trial_expires_at TEXT",
   "ALTER TABLE users ADD COLUMN trial_claimed INTEGER DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN disabled INTEGER DEFAULT 0",
   "ALTER TABLE conversations ADD COLUMN share_id TEXT",
 ]) {
   try { db.exec(statement); } catch { /* Column already exists. */ }
@@ -97,14 +103,15 @@ for (const statement of [
 try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_oauth_identity ON users(oauth_provider, oauth_subject)"); } catch { /* Existing data can be repaired by an admin. */ }
 
 // ---------- MODELS (Guider catalog) ----------
+const VALID_OPENROUTER_FREE_MODEL = "meta-llama/llama-3.1-8b-instruct";
 const MODELS = {
-  "guider-flash":   { name: "Guider Flash",    tier: "free",  provider: "openrouter", model: "meta-llama/llama-3.1-8b-instruct:free", dailyLimit: 30, desc: "Fast everyday AI chat, normal questions, general assistance." },
+  "guider-flash":   { name: "Guider Flash",    tier: "free",  provider: "openrouter", model: VALID_OPENROUTER_FREE_MODEL, dailyLimit: 30, desc: "Fast everyday AI chat, normal questions, general assistance." },
   "guider-pro":      { name: "Guider Pro",      tier: "paid",  provider: "anthropic",  model: "claude-sonnet-4-6", dailyLimit: 0, desc: "Advanced chatting, coding, image generation. Unlimited usage." },
   "guider-go":       { name: "Guider Go",       tier: "paid",  provider: "openai",     model: "gpt-4.1", dailyLimit: 0, desc: "Coding, programming aur complete projects." },
   "guider-plus":     { name: "Guider Plus",     tier: "free",  provider: "google",     model: "gemini-1.5-flash", dailyLimit: 15, desc: "Web/resource finding, content research, logo/banner/design, social-media assistance." },
   "guider-plus-max": { name: "Guider Plus Max", tier: "paid",  provider: "google",     model: "gemini-1.5-pro", dailyLimit: 0, desc: "Heavy projects aur advanced Plus tasks." },
-  "guider-offline":  { name: "Guider Offline",  tier: "guest", provider: "openrouter", model: "meta-llama/llama-3.1-8b-instruct:free", dailyLimit: 5, desc: "Limited AI functionality without full account access." },
-  "guider-fast":     { name: "Guider Fast",     tier: "free",  provider: "openrouter", model: "google/gemma-2-9b-it:free", dailyLimit: 30, desc: "Very fast everyday tasks." },
+  "guider-offline":  { name: "Guider Offline",  tier: "guest", provider: "openrouter", model: VALID_OPENROUTER_FREE_MODEL, dailyLimit: 5, desc: "Limited AI functionality without full account access." },
+  "guider-fast":     { name: "Guider Fast",     tier: "free",  provider: "openrouter", model: VALID_OPENROUTER_FREE_MODEL, dailyLimit: 30, desc: "Very fast everyday tasks." },
   "guider-gpt":      { name: "Guider GPT",      tier: "paid",  provider: "openai",     model: "gpt-4o", dailyLimit: 0, desc: "Premium all-rounder model for advanced general-purpose work." },
 };
 
@@ -117,9 +124,30 @@ const PLANS = [
   plan("pro",      "Pro",      1999, 3999, ["guider-pro"],              "Advanced chat, coding, and image generation."),
   plan("gpt",      "Business", 2999, 5999, ["guider-gpt", "guider-go"], "Advanced general-purpose and project access."),
 ];
+for (const [id, model] of Object.entries(MODELS)) {
+  db.prepare("INSERT OR IGNORE INTO owner_model_settings (model_id, enabled, tier, daily_limit) VALUES (?, 1, ?, ?)").run(id, model.tier, model.dailyLimit);
+}
+for (const item of PLANS) {
+  db.prepare("INSERT OR IGNORE INTO owner_plan_settings (plan_id, monthly, yearly, enabled, features) VALUES (?, ?, ?, 1, ?)")
+    .run(item.id, item.monthly, item.yearly, JSON.stringify(item.unlocks));
+}
+db.prepare("INSERT OR IGNORE INTO owner_settings (key, value) VALUES ('maintenance', '0')").run();
+
+function modelConfig(id) {
+  const base = MODELS[id];
+  if (!base) return null;
+  const setting = db.prepare("SELECT * FROM owner_model_settings WHERE model_id = ?").get(id);
+  return { ...base, enabled: setting ? Boolean(setting.enabled) : true, tier: setting?.tier || base.tier, dailyLimit: setting?.daily_limit ?? base.dailyLimit };
+}
+function planConfig(id) {
+  const base = PLANS.find((item) => item.id === id);
+  if (!base) return null;
+  const setting = db.prepare("SELECT * FROM owner_plan_settings WHERE plan_id = ?").get(id);
+  return { ...base, monthly: setting?.monthly ?? base.monthly, yearly: setting?.yearly ?? base.yearly, enabled: setting ? Boolean(setting.enabled) : true, dailyLimit: setting?.daily_limit ?? null, features: setting?.features ? JSON.parse(setting.features) : base.unlocks };
+}
 function planUnlocksModel(planId, modelId) {
-  const plan = PLANS.find((p) => p.id === planId);
-  return plan ? plan.unlocks.includes(modelId) : false;
+  const plan = planConfig(planId);
+  return Boolean(plan?.enabled && plan.features.includes(modelId));
 }
 
 // ---------- APP SETUP ----------
@@ -129,6 +157,7 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 const publicDir = path.join(__dirname, "..", "Public");
+app.get(["/owner", "/owner.html"], requireOwner, (req, res) => res.sendFile(path.join(publicDir, "owner-dashboard.html")));
 app.use(express.static(publicDir));
 
 // ---------- OWNER AUTO-SETUP ----------
@@ -170,18 +199,29 @@ function hasGuiderGptTrial(user) {
   return Boolean(user?.trial_expires_at && new Date(user.trial_expires_at).getTime() > Date.now());
 }
 function canUseModel(user, modelId) {
+  const model = modelConfig(modelId);
+  if (!model?.enabled) return false;
   if (!user) return false;
   return user.role === "owner" || planUnlocksModel(user.plan, modelId) || (modelId === "guider-gpt" && hasGuiderGptTrial(user));
+}
+function isConfiguredOwner(user) {
+  const email = (process.env.OWNER_EMAIL || "").toLowerCase().trim();
+  return Boolean(email && user?.role === "owner" && user.email.toLowerCase() === email);
+}
+function maintenanceEnabled() { return db.prepare("SELECT value FROM owner_settings WHERE key = 'maintenance'").get()?.value === "1"; }
+function audit(ownerId, action, target = null, detail = null) {
+  db.prepare("INSERT INTO owner_audit_log (id, owner_id, action, target, detail) VALUES (?, ?, ?, ?, ?)").run(nanoid(), ownerId, action, target, detail ? JSON.stringify(detail) : null);
 }
 function requireAuth(req, res, next) {
   const user = getUser(req);
   if (!user) return res.status(401).json({ error: "Sign in required." });
+  if (user.disabled) return res.status(403).json({ error: "This account has been disabled." });
   req.user = user;
   next();
 }
 function requireOwner(req, res, next) {
   const user = getUser(req);
-  if (!user || user.role !== "owner") return res.status(403).json({ error: "Owner access only." });
+  if (!isConfiguredOwner(user)) return res.status(403).json({ error: "Owner access only." });
   req.user = user;
   next();
 }
@@ -209,6 +249,7 @@ app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body || {};
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get((email || "").toLowerCase());
   if (!user) return res.status(401).json({ error: "Invalid email or password." });
+  if (user.disabled) return res.status(403).json({ error: "This account has been disabled." });
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) return res.status(401).json({ error: "Invalid email or password." });
   setSession(res, req, user);
@@ -292,6 +333,7 @@ app.get("/api/auth/google/callback", async (req, res) => {
       }
       user = db.prepare("SELECT * FROM users WHERE oauth_provider = ? AND oauth_subject = ?").get("google", profile.sub);
     }
+    if (user.disabled) return fail("account_disabled");
     setSession(res, req, user);
     res.redirect("/chat.html?oauth=success");
   } catch (error) {
@@ -310,21 +352,23 @@ app.patch("/api/auth/me", requireAuth, (req, res) => {
 // ---------- MODELS / PLANS ----------
 app.get("/api/models", (req, res) => {
   const user = getUser(req);
-  const list = Object.entries(MODELS).map(([id, m]) => {
+  const list = Object.entries(MODELS).map(([id]) => {
+    const m = modelConfig(id);
     let locked = false;
+    if (!m.enabled) locked = true;
     if (m.tier === "paid") locked = !canUseModel(user, id);
     if (m.tier === "guest" && user) locked = true;
-    return { id, name: m.name, tier: m.tier, desc: m.desc, locked };
+    return { id, name: m.name, tier: m.tier, desc: m.desc, locked, enabled: m.enabled, dailyLimit: m.dailyLimit };
   });
   res.json({ models: list });
 });
 
-app.get("/api/plans", (req, res) => res.json({ plans: PLANS }));
+app.get("/api/plans", (req, res) => res.json({ plans: PLANS.map((item) => planConfig(item.id)) }));
 
 app.get("/api/usage", requireAuth, (req, res) => {
   const day = new Date().toISOString().slice(0, 10);
   const used = db.prepare("SELECT model, count FROM usage_log WHERE user_id = ? AND day = ?").all(req.user.id, day);
-  const models = used.map(row => ({ modelId: row.model, name: MODELS[row.model]?.name || row.model, used: row.count, limit: MODELS[row.model]?.dailyLimit || 0, remaining: Math.max(0, (MODELS[row.model]?.dailyLimit || 0) - row.count) }));
+  const models = used.map(row => { const model = modelConfig(row.model); const limit = model?.dailyLimit || 0; return { modelId: row.model, name: model?.name || row.model, used: row.count, limit, remaining: Math.max(0, limit - row.count) }; });
   res.json({ day, models, total: models.reduce((sum, item) => sum + item.used, 0) });
 });
 
@@ -339,6 +383,7 @@ app.post("/api/announcements", requireOwner, (req, res) => {
   if (!title?.trim() || !body?.trim()) return res.status(400).json({ error: "Title and message are required." });
   const id = nanoid();
   db.prepare("INSERT INTO announcements (id, title, body) VALUES (?, ?, ?)").run(id, title.trim().slice(0, 120), body.trim().slice(0, 2000));
+  audit(req.user.id, "announcement.created", id, { title: title.trim().slice(0, 120) });
   res.status(201).json({ announcement: db.prepare("SELECT * FROM announcements WHERE id = ?").get(id) });
 });
 app.post("/api/announcements/:id/read", requireAuth, (req, res) => {
@@ -406,32 +451,94 @@ app.get("/api/shared/:shareId", (req, res) => {
 
 // ---------- OWNER-ONLY ----------
 app.get("/api/owner/overview", requireOwner, (req, res) => {
-  const totalUsers = db.prepare("SELECT COUNT(*) c FROM users").get().c;
-  const totalRequests = db.prepare("SELECT COUNT(*) c FROM ai_requests").get().c;
-  const activeUsers = db.prepare("SELECT COUNT(DISTINCT user_id) c FROM ai_requests WHERE created_at >= datetime('now', '-30 days')").get().c;
-  const newUsers = db.prepare("SELECT COUNT(*) c FROM users WHERE created_at >= datetime('now', '-30 days')").get().c;
-  const trialUsers = db.prepare("SELECT COUNT(*) c FROM users WHERE trial_expires_at > datetime('now')").get().c;
-  const expiredTrials = db.prepare("SELECT COUNT(*) c FROM users WHERE trial_claimed = 1 AND (trial_expires_at IS NULL OR trial_expires_at <= datetime('now'))").get().c;
-  const recentUsers = db.prepare("SELECT email, name, role, plan, created_at FROM users ORDER BY created_at DESC LIMIT 20").all();
-  const recentRequests = db.prepare("SELECT model, status, created_at FROM ai_requests ORDER BY created_at DESC LIMIT 20").all();
-  const planDistribution = db.prepare("SELECT plan, COUNT(*) AS count FROM users GROUP BY plan").all();
-  const modelUsage = db.prepare("SELECT model, COUNT(*) AS count FROM ai_requests GROUP BY model ORDER BY count DESC LIMIT 12").all();
-  res.json({ totalUsers, totalRequests, activeUsers, newUsers, trialUsers, expiredTrials, recentUsers, recentRequests, planDistribution, modelUsage, systemStatus: "operational" });
+  const scalar = (sql) => db.prepare(sql).get().c || 0;
+  const recentActivity = db.prepare(`SELECT 'request' AS type, model AS label, status AS detail, created_at FROM ai_requests
+    UNION ALL SELECT 'payment', plan, status, created_at FROM payments
+    UNION ALL SELECT 'user', email, plan, created_at FROM users ORDER BY created_at DESC LIMIT 20`).all();
+  res.json({
+    totalUsers: scalar("SELECT COUNT(*) c FROM users"), activeUsers: scalar("SELECT COUNT(DISTINCT user_id) c FROM ai_requests WHERE user_id IS NOT NULL AND created_at >= datetime('now', '-30 days')"),
+    guests: scalar("SELECT COUNT(DISTINCT user_id) c FROM ai_requests WHERE user_id IS NULL"), chats: scalar("SELECT COUNT(*) c FROM conversations"),
+    totalRequests: scalar("SELECT COUNT(*) c FROM ai_requests"), newUsers: scalar("SELECT COUNT(*) c FROM users WHERE created_at >= datetime('now', '-30 days')"),
+    revenue: scalar("SELECT COALESCE(SUM(amount),0) c FROM payments WHERE status = 'success'"), payments: scalar("SELECT COUNT(*) c FROM payments"),
+    trialUsers: scalar("SELECT COUNT(*) c FROM users WHERE trial_expires_at > datetime('now')"), expiredTrials: scalar("SELECT COUNT(*) c FROM users WHERE trial_claimed = 1 AND (trial_expires_at IS NULL OR trial_expires_at <= datetime('now'))"),
+    planDistribution: db.prepare("SELECT plan, COUNT(*) AS count FROM users GROUP BY plan").all(),
+    modelUsage: db.prepare("SELECT model, COUNT(*) AS count FROM ai_requests GROUP BY model ORDER BY count DESC LIMIT 12").all(),
+    recentActivity, systemStatus: maintenanceEnabled() ? "maintenance" : "operational"
+  });
 });
-
 app.get("/api/owner/users", requireOwner, (req, res) => {
-  const query = String(req.query.q || "").trim();
-  const like = `%${query}%`;
-  const users = db.prepare("SELECT id, email, name, role, plan, trial_started_at, trial_expires_at, trial_claimed, created_at FROM users WHERE email LIKE ? OR name LIKE ? ORDER BY created_at DESC LIMIT 100").all(like, like);
+  const like = `%${String(req.query.q || "").trim()}%`;
+  const users = db.prepare(`SELECT u.id,u.email,u.name,u.role,u.plan,u.disabled,u.trial_started_at,u.trial_expires_at,u.trial_claimed,u.created_at,
+    COALESCE((SELECT SUM(count) FROM usage_log WHERE user_id=u.id),0) AS usage,
+    (SELECT COUNT(*) FROM conversations WHERE user_id=u.id) AS chats FROM users u WHERE u.email LIKE ? OR u.name LIKE ? ORDER BY u.created_at DESC LIMIT 100`).all(like, like);
   res.json({ users });
 });
+app.get("/api/owner/users/:id", requireOwner, (req, res) => {
+  const user = db.prepare("SELECT id,email,name,role,plan,disabled,credits,trial_started_at,trial_expires_at,created_at FROM users WHERE id=?").get(req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found." });
+  const usage = db.prepare("SELECT model, SUM(count) AS count FROM usage_log WHERE user_id=? GROUP BY model").all(user.id);
+  const requests = db.prepare("SELECT model,status,created_at FROM ai_requests WHERE user_id=? ORDER BY created_at DESC LIMIT 30").all(user.id);
+  res.json({ user, usage, requests });
+});
+app.patch("/api/owner/users/:id", requireOwner, (req, res) => {
+  const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found." });
+  if (isConfiguredOwner(user)) return res.status(400).json({ error: "The configured owner account cannot be changed here." });
+  const disabled = req.body?.disabled ? 1 : 0;
+  db.prepare("UPDATE users SET disabled=? WHERE id=?").run(disabled, user.id);
+  audit(req.user.id, disabled ? "user.disabled" : "user.enabled", user.id, { email: user.email });
+  res.json({ ok: true });
+});
+app.get("/api/owner/models", requireOwner, (req, res) => res.json({ models: Object.keys(MODELS).map((id) => ({ id, ...modelConfig(id) })) }));
+app.patch("/api/owner/models/:id", requireOwner, (req, res) => {
+  const base = MODELS[req.params.id]; if (!base) return res.status(404).json({ error: "Model not found." });
+  const { enabled, tier, dailyLimit } = req.body || {};
+  if (tier && !["free","paid","guest"].includes(tier)) return res.status(400).json({ error: "Invalid model availability tier." });
+  if (dailyLimit != null && (!Number.isInteger(dailyLimit) || dailyLimit < 0 || dailyLimit > 100000)) return res.status(400).json({ error: "Invalid daily limit." });
+  const current = modelConfig(req.params.id);
+  db.prepare("UPDATE owner_model_settings SET enabled=?, tier=?, daily_limit=? WHERE model_id=?").run(enabled == null ? Number(current.enabled) : Number(Boolean(enabled)), tier || current.tier, dailyLimit ?? current.dailyLimit, req.params.id);
+  audit(req.user.id, "model.updated", req.params.id, { enabled, tier, dailyLimit });
+  res.json({ model: { id: req.params.id, ...modelConfig(req.params.id) } });
+});
+app.get("/api/owner/plans", requireOwner, (req, res) => res.json({ plans: PLANS.map((item) => planConfig(item.id)) }));
+app.patch("/api/owner/plans/:id", requireOwner, (req, res) => {
+  const current = planConfig(req.params.id); if (!current) return res.status(404).json({ error: "Plan not found." });
+  const { monthly, yearly, enabled, dailyLimit, features } = req.body || {};
+  if ([monthly, yearly, dailyLimit].some((value) => value != null && (!Number.isInteger(value) || value < 0))) return res.status(400).json({ error: "Prices and limits must be non-negative integers." });
+  if (features != null && (!Array.isArray(features) || features.some((id) => !MODELS[id]))) return res.status(400).json({ error: "Invalid plan features." });
+  db.prepare("UPDATE owner_plan_settings SET monthly=?,yearly=?,enabled=?,daily_limit=?,features=? WHERE plan_id=?").run(monthly ?? current.monthly, yearly ?? current.yearly, enabled == null ? Number(current.enabled) : Number(Boolean(enabled)), dailyLimit ?? current.dailyLimit, JSON.stringify(features ?? current.features), req.params.id);
+  audit(req.user.id, "plan.updated", req.params.id, { monthly, yearly, enabled, dailyLimit, features });
+  res.json({ plan: planConfig(req.params.id) });
+});
+app.get("/api/owner/usage", requireOwner, (req,res) => res.json({ usage: db.prepare("SELECT user_id,model,SUM(count) AS count,MAX(day) AS last_day FROM usage_log GROUP BY user_id,model ORDER BY count DESC LIMIT 200").all() }));
+app.get("/api/owner/payments", requireOwner, (req,res) => {
+  const payments = db.prepare("SELECT p.*,u.email FROM payments p LEFT JOIN users u ON u.id=p.user_id ORDER BY p.created_at DESC LIMIT 200").all();
+  res.json({ payments, totals: db.prepare("SELECT status,COUNT(*) AS count,COALESCE(SUM(amount),0) AS amount FROM payments GROUP BY status").all() });
+});
+app.get("/api/owner/announcements", requireOwner, (req,res) => res.json({ announcements: db.prepare("SELECT * FROM announcements ORDER BY created_at DESC LIMIT 100").all() }));
+app.patch("/api/owner/announcements/:id", requireOwner, (req,res) => {
+  const { title, body } = req.body || {}; if (!title?.trim() || !body?.trim()) return res.status(400).json({ error: "Title and message are required." });
+  const result = db.prepare("UPDATE announcements SET title=?,body=? WHERE id=?").run(title.trim().slice(0,120),body.trim().slice(0,2000),req.params.id);
+  if (!result.changes) return res.status(404).json({ error: "Announcement not found." }); audit(req.user.id, "announcement.updated", req.params.id); res.json({ ok:true });
+});
+app.delete("/api/owner/announcements/:id", requireOwner, (req,res) => { db.prepare("DELETE FROM announcement_reads WHERE announcement_id=?").run(req.params.id); const result=db.prepare("DELETE FROM announcements WHERE id=?").run(req.params.id); if(!result.changes)return res.status(404).json({error:"Announcement not found."}); audit(req.user.id,"announcement.deleted",req.params.id);res.json({ok:true}); });
+app.get("/api/owner/maintenance", requireOwner, (req,res) => res.json({ enabled: maintenanceEnabled() }));
+app.patch("/api/owner/maintenance", requireOwner, (req,res) => { const enabled=Boolean(req.body?.enabled); db.prepare("UPDATE owner_settings SET value=? WHERE key='maintenance'").run(enabled?"1":"0"); audit(req.user.id,"maintenance.updated",null,{enabled});res.json({enabled}); });
+app.get("/api/owner/audit", requireOwner, (req,res) => res.json({ audit: db.prepare("SELECT a.*,u.email AS owner_email FROM owner_audit_log a LEFT JOIN users u ON u.id=a.owner_id ORDER BY a.created_at DESC LIMIT 200").all() }));
 
 // ---------- USAGE LIMIT ----------
 function checkLimit(userId, modelId) {
-  const model = MODELS[modelId];
+  const model = modelConfig(modelId);
   if (!model) return { allowed: false, reason: "Unknown model." };
-  if (model.dailyLimit === 0) return { allowed: true };
+  if (!model.enabled) return { allowed: false, reason: `${model.name} is temporarily unavailable.` };
+  const account = db.prepare("SELECT plan FROM users WHERE id = ?").get(userId);
+  const planLimit = account ? planConfig(account.plan)?.dailyLimit : null;
   const day = new Date().toISOString().slice(0, 10);
+  if (planLimit > 0) {
+    const planUsed = db.prepare("SELECT COALESCE(SUM(count),0) AS count FROM usage_log WHERE user_id = ? AND day = ?").get(userId, day).count;
+    if (planUsed >= planLimit) return { allowed: false, reason: `Daily plan limit reached (${planLimit}/day).` };
+  }
+  if (model.dailyLimit === 0) return { allowed: true };
   const row = db.prepare("SELECT * FROM usage_log WHERE user_id = ? AND model = ? AND day = ?").get(userId, modelId, day);
   const used = row?.count || 0;
   if (used >= model.dailyLimit) return { allowed: false, reason: `Daily limit reached for ${model.name} (${model.dailyLimit}/day).` };
@@ -443,27 +550,65 @@ function logRequest(userId, modelId, status) {
   db.prepare("INSERT INTO ai_requests (id, user_id, model, status) VALUES (?, ?, ?, ?)").run(nanoid(), userId, modelId, status);
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`Request timeout after ${timeoutMs}ms.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function providerErrorText(detail, fallback = "The AI provider returned an error.") {
+  if (!detail) return fallback;
+  if (typeof detail === "string") {
+    try {
+      const parsed = JSON.parse(detail);
+      if (parsed?.error?.message) return parsed.error.message;
+      if (parsed?.message) return parsed.message;
+    } catch {
+      // Fall through to plain text handling below.
+    }
+    return detail;
+  }
+  if (detail?.error?.message) return detail.error.message;
+  if (detail?.message) return detail.message;
+  return fallback;
+}
+
 // ---------- PROVIDER CALLS ----------
 async function callProvider(provider, model, messages) {
   if (provider === "openai") {
     const key = process.env.OPENAI_API_KEY;
     if (!key) throw { config: true, provider };
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model, messages }),
     });
-    if (!r.ok) throw { config: false, detail: await r.text() };
+    if (!r.ok) {
+      const detail = await r.text();
+      throw { config: false, detail, provider };
+    }
     const data = await r.json();
     return data.choices?.[0]?.message?.content || "";
   }
   if (provider === "anthropic") {
     const key = process.env.ANTHROPIC_API_KEY;
     if (!key) throw { config: true, provider };
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
       method: "POST", headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({ model, max_tokens: 2000, messages }),
     });
-    if (!r.ok) throw { config: false, detail: await r.text() };
+    if (!r.ok) {
+      const detail = await r.text();
+      throw { config: false, detail, provider };
+    }
     const data = await r.json();
     return (data.content || []).map((b) => b.text).join("\n");
   }
@@ -471,47 +616,85 @@ async function callProvider(provider, model, messages) {
     const key = process.env.GOOGLE_API_KEY;
     if (!key) throw { config: true, provider };
     const contents = messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+    const r = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents }),
     });
-    if (!r.ok) throw { config: false, detail: await r.text() };
+    if (!r.ok) {
+      const detail = await r.text();
+      throw { config: false, detail, provider };
+    }
     const data = await r.json();
     return data.candidates?.[0]?.content?.parts?.map((p) => p.text).join("\n") || "";
   }
   if (provider === "openrouter") {
     const key = process.env.OPENROUTER_API_KEY;
     if (!key) throw { config: true, provider };
-    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, messages }),
+    const r = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+        "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:3001",
+        "X-Title": "The Tech Guider AI",
+      },
+      body: JSON.stringify({ model, messages, max_tokens: 1024 }),
     });
-    if (!r.ok) throw { config: false, detail: await r.text() };
+    if (!r.ok) {
+      const detail = await r.text();
+      throw { config: false, detail, provider };
+    }
     const data = await r.json();
     return data.choices?.[0]?.message?.content || "";
   }
   throw new Error("Unknown provider");
 }
 
+// Isolated from user conversations: these messages are never written to the
+// conversations/messages tables and are available only through owner routes.
+app.get("/api/owner/assistant/history", requireOwner, (req, res) => {
+  res.json({ messages: db.prepare("SELECT role,content,created_at FROM owner_assistant_messages WHERE owner_id=? ORDER BY created_at ASC LIMIT 100").all(req.user.id) });
+});
+app.post("/api/owner/assistant", requireOwner, async (req, res) => {
+  const { message, modelId = "guider-flash" } = req.body || {};
+  const model = modelConfig(modelId);
+  if (!message?.trim()) return res.status(400).json({ error: "Message is required." });
+  if (!model) return res.status(400).json({ error: "Unknown model selected." });
+  const history = db.prepare("SELECT role,content FROM owner_assistant_messages WHERE owner_id=? ORDER BY created_at DESC LIMIT 16").all(req.user.id).reverse();
+  db.prepare("INSERT INTO owner_assistant_messages (id,owner_id,role,content) VALUES (?,?,?,?)").run(nanoid(),req.user.id,"user",message.trim());
+  try {
+    const reply = await callProvider(model.provider, model.model, [{ role:"system",content:"You are the private The Tech Guider AI Owner Assistant. Help administer the platform safely. Never reveal secrets or claim unverified operational actions." },...history,{role:"user",content:message.trim()}]);
+    db.prepare("INSERT INTO owner_assistant_messages (id,owner_id,role,content) VALUES (?,?,?,?)").run(nanoid(),req.user.id,"assistant",reply);
+    audit(req.user.id,"owner_assistant.used",modelId);
+    res.json({ reply });
+  } catch (error) {
+    if (error.config) return res.status(503).json({ error: `${model.name} isn't configured.` });
+    res.status(502).json({ error: "Owner Assistant provider request failed." });
+  }
+});
+
 // ---------- CHAT ROUTE ----------
 app.post("/api/chat", async (req, res) => {
   const { message, modelId = "guider-flash", conversationId } = req.body || {};
   if (!message || !message.trim()) return res.status(400).json({ error: "Message is required." });
 
-  const model = MODELS[modelId];
+  const model = modelConfig(modelId);
   if (!model) return res.status(400).json({ error: "Unknown model selected." });
 
   const user = getUser(req);
+  if (user?.disabled) return res.status(403).json({ error: "This account has been disabled." });
+  if (maintenanceEnabled() && !isConfiguredOwner(user)) return res.status(503).json({ error: "The service is temporarily in maintenance mode." });
+  if (!model.enabled) return res.status(503).json({ error: `${model.name} is temporarily unavailable.` });
   if (model.tier === "guest" && user) return res.status(400).json({ error: "Guider Offline is for guests only." });
   if (!user && model.tier !== "guest") return res.status(401).json({ error: "Please sign in to use this model. Guests can use Guider Offline." });
   if (model.tier === "paid" && !canUseModel(user, modelId)) {
     return res.status(403).json({ error: `${model.name} requires an upgrade. Visit /plans.html.` });
   }
 
-  const usageKey = user ? user.id : req.cookies?.tg_guest || (() => {
+  const usageKey = user ? user.id : (req.cookies?.tg_guest || (() => {
     const gid = nanoid();
     res.cookie("tg_guest", gid, { httpOnly: true, maxAge: 365 * 24 * 60 * 60 * 1000 });
     return gid;
-  })();
+  })());
 
   const limit = checkLimit(usageKey, modelId);
   if (!limit.allowed) return res.status(429).json({ error: limit.reason });
@@ -547,13 +730,17 @@ app.post("/api/chat", async (req, res) => {
   } catch (err) {
     logRequest(user ? user.id : null, modelId, "error");
     if (err.config) return res.status(503).json({ error: `${model.name} isn't configured yet (missing ${err.provider.toUpperCase()}_API_KEY).` });
-    console.error(err);
-    res.status(502).json({ error: `${model.name} could not reach its ${model.provider} provider. Check the provider API key, model access, billing, and deployment network settings.` });
+    const providerMessage = providerErrorText(err.detail, `${model.name} could not reach its ${model.provider} provider.`);
+    console.error(`[chat] ${model.name} provider failure:`, providerMessage);
+    res.status(502).json({
+      error: `${model.name} provider error: ${providerMessage}`,
+    });
   }
 });
 
 // ---------- IMAGE GENERATION ----------
 app.post("/api/image/generate", requireAuth, async (req, res) => {
+  if (maintenanceEnabled() && !isConfiguredOwner(req.user)) return res.status(503).json({ error: "The service is temporarily in maintenance mode." });
   const { prompt } = req.body || {};
   if (!prompt) return res.status(400).json({ error: "Prompt is required." });
   const key = process.env.OPENAI_API_KEY;
