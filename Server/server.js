@@ -223,10 +223,23 @@ app.get("/api/auth/me", (req, res) => {
 });
 
 // ---------- GOOGLE OAUTH ----------
-// Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and APP_URL in your deployment.
+// Register both callback URLs in Google Cloud:
+// https://theguiderai.dpdns.org/api/auth/google/callback
+// http://localhost:3000/api/auth/google/callback
 function oauthRedirectUri(req) {
-  const origin = process.env.APP_URL || `${isSecureRequest(req) ? "https" : "http"}://${req.get("host")}`;
-  return `${origin.replace(/\/$/, "")}/api/auth/google/callback`;
+  const requestOrigin = `${isSecureRequest(req) ? "https" : "http"}://${req.get("host")}`;
+  const hostname = String(req.hostname || "").toLowerCase();
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return `${requestOrigin.replace(/\/$/, "")}/api/auth/google/callback`;
+  }
+
+  // GOOGLE_REDIRECT_URI may be the full callback URL; APP_URL is a base URL.
+  // The production default prevents a proxy/deployment hostname from changing
+  // the OAuth redirect URI sent to Google.
+  const configured = process.env.GOOGLE_REDIRECT_URI || process.env.APP_URL || "https://theguiderai.dpdns.org";
+  return configured.replace(/\/$/, "").endsWith("/api/auth/google/callback")
+    ? configured.replace(/\/$/, "")
+    : `${configured.replace(/\/$/, "")}/api/auth/google/callback`;
 }
 app.get("/api/auth/google", (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
