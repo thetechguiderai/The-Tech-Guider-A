@@ -109,13 +109,13 @@ const MODELS = {
 };
 
 // ---------- PLANS (PKR pricing) ----------
-const plan = (id, name, monthly, unlocks, desc) => ({ id, name, monthly, yearly: monthly * 2, unlocks, desc });
+const plan = (id, name, monthly, yearly, unlocks, desc) => ({ id, name, monthly, yearly, unlocks, desc });
 const PLANS = [
-  plan("free",     "Free",     0,    [],                             "Get started with The Tech Guider AI."),
-  plan("plus",     "Plus",     499,  ["guider-plus"],                "Resource, content, and design assistance."),
-  plan("plus_max", "Content",  999,  ["guider-plus-max"],            "Heavy content and advanced Plus tasks."),
-  plan("pro",      "Pro",      1999, ["guider-pro"],                 "Advanced chat, coding, and image generation."),
-  plan("gpt",      "Business", 2999, ["guider-gpt", "guider-go"],    "Advanced general-purpose and project access."),
+  plan("free",     "Free",     0,    0,    [],                          "Get started with The Tech Guider AI."),
+  plan("plus",     "Plus",     499,  999,  ["guider-plus"],             "Resource, content, and design assistance."),
+  plan("plus_max", "Content",  999,  1999, ["guider-plus-max"],         "Heavy content and advanced Plus tasks."),
+  plan("pro",      "Pro",      1999, 3999, ["guider-pro"],              "Advanced chat, coding, and image generation."),
+  plan("gpt",      "Business", 2999, 5999, ["guider-gpt", "guider-go"], "Advanced general-purpose and project access."),
 ];
 function planUnlocksModel(planId, modelId) {
   const plan = PLANS.find((p) => p.id === planId);

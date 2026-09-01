@@ -14,11 +14,13 @@
     "desktop:msi": "npm run desktop:build",
     "package:msi": "npm run desktop:msi",
     "android:sync": "npx cap sync android",
-    "android:build": "cd android && gradlew.bat assembleRelease"
+    "android:build": "cd android && gradlew.bat assembleRelease",
+    "ios:sync": "npx cap sync ios"
   },
   "build": {
     "appId": "com.thetechguider.ai",
     "productName": "The Tech Guider AI",
+    "compression": "store",
     "directories": {
       "buildResources": "desktop/build",
       "output": "release"
@@ -60,6 +62,7 @@
   "devDependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
     "electron": "^37.2.6",
     "electron-builder": "^26.0.12",
     "typescript": "^5.7.3"

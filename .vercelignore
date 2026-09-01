@@ -1,0 +1,5 @@
+release/
+release-msi/
+node_modules/
+*.exe
+*.msi

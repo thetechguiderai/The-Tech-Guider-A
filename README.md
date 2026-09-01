@@ -40,6 +40,20 @@ The release APK is written to `android/app/build/outputs/apk/release/app-release
 
 Android prerequisites: Android Studio, a compatible Android SDK/platform, Java 21 (or the version required by the generated Gradle wrapper), and `ANDROID_HOME`/Android Studio SDK configuration. If Gradle needs a signing configuration for distribution, configure it outside source control before publishing.
 
+## iOS
+
+The Capacitor iOS project is in `ios/App/App.xcworkspace` and loads the same HTTPS production URL configured by `TG_PRODUCTION_URL` or `APP_URL`.
+
+On a macOS machine with Xcode and CocoaPods installed:
+
+```sh
+npm install
+npm run ios:sync
+npx cap open ios
+```
+
+Open the generated workspace, choose an Apple Developer signing team and unique bundle identifier, then use Xcode **Product → Archive → Distribute App** to create a signed IPA or upload to App Store Connect. An Apple Developer account, macOS, Xcode, CocoaPods, and valid signing credentials are required; this Windows environment cannot produce a signed iOS IPA.
+
 ## Releases
 
 Generated MSI/APK files, unpacked applications, Gradle output, local databases, and production URL injection files are ignored by Git. Host release artifacts in a real release service (for example GitHub Releases) before converting the site’s “Coming Soon” download controls into download links.
