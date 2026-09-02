@@ -16,7 +16,11 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
-const SECRET = process.env.SESSION_SECRET || "dev-secret-change-me";
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && (process.env.NODE_ENV === "production" || process.env.VERCEL)) {
+  throw new Error("SESSION_SECRET must be configured in production.");
+}
+const SECRET = sessionSecret || "dev-secret-change-me";
 
 // ---------- DATABASE ----------
 const db = new DatabaseSync(process.env.DATABASE_PATH || path.join(__dirname, "tech-guider.db"));

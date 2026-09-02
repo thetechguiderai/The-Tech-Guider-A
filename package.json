@@ -10,7 +10,7 @@
     "start": "node Server/server.js",
     "vercel-build": "node scripts/vercel-build.mjs",
     "desktop": "electron .",
-    "desktop:build": "node desktop/prepare-production.cjs && electron-builder --win msi --x64",
+    "desktop:build": "node desktop/prepare-production.cjs && electron-builder --win nsis --x64",
     "desktop:msi": "npm run desktop:build",
     "package:msi": "npm run desktop:msi",
     "android:sync": "npx cap sync android",
@@ -21,6 +21,7 @@
     "appId": "com.thetechguider.ai",
     "productName": "The Tech Guider AI",
     "compression": "store",
+    "asar": false,
     "directories": {
       "buildResources": "desktop/build",
       "output": "release"
@@ -34,7 +35,7 @@
     "win": {
       "target": [
         {
-          "target": "msi",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
@@ -42,10 +43,11 @@
       ],
       "icon": "Public/logo.png"
     },
-    "msi": {
+    "nsis": {
       "oneClick": false,
-      "perMachine": false,
-      "runAfterFinish": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   },
   "dependencies": {

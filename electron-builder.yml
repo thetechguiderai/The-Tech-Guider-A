@@ -1,0 +1,21 @@
+appId: com.thetechguider.ai
+productName: The Tech Guider AI
+directories:
+  buildResources: desktop/build
+  output: release
+files:
+  - desktop/**/*
+  - Server/**/*
+  - Public/**/*
+  - package.json
+win:
+  target:
+    - target: msi
+      arch:
+        - x64
+  icon: Public/logo.png
+msi:
+  oneClick: false
+  perMachine: false
+  runAfterFinish: true
+  warningsAsErrors: false

@@ -15,7 +15,7 @@ async function sendMessage(){
   let text = composerInput.value.trim();
   if (!text || sending) return;
   if (attachedText) {
-    text = `Attached file: ${attachedName}\n\n```\n${attachedText}\n```\n\n${text}`;
+    text = "Attached file: " + attachedName + "\n\n```\n" + attachedText + "\n```\n\n" + text;
     attachedText = attachedName = null;
     attachedFileTag.hidden = true;
     fileInput.value = "";

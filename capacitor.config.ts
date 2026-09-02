@@ -1,7 +1,7 @@
 import "dotenv/config";
 import type { CapacitorConfig } from "@capacitor/cli";
 
-const url = process.env.TG_PRODUCTION_URL || process.env.APP_URL || "https://theguiderai.netlify.app";
+const url = process.env.TG_PRODUCTION_URL || process.env.APP_URL || "https://theguiderai.dpdns.org";
 if (!url || !/^https:\/\/(?!localhost|127\.0\.0\.1)/i.test(url)) {
   throw new Error("Set TG_PRODUCTION_URL to your deployed HTTPS application URL before syncing Android.");
 }
