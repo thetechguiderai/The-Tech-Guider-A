@@ -18,7 +18,7 @@ Set `TG_PRODUCTION_URL` to the HTTPS URL of the deployed web application (for ex
 ## Windows NSIS installer
 
 ```powershell
-$env:TG_PRODUCTION_URL = "https://your-production-domain.example"
+$env:TG_PRODUCTION_URL = "https://theguiderai.dpdns.org"
 npm run desktop:nsis
 ```
 
@@ -31,7 +31,7 @@ Windows prerequisites: Node.js, npm, and the Electron/electron-builder dependenc
 The Android wrapper is generated with Capacitor and connects directly to the configured HTTPS production web app/API. It keeps web authentication in the hosted origin, including its secure cookie behavior.
 
 ```powershell
-$env:TG_PRODUCTION_URL = "https://your-production-domain.example"
+$env:TG_PRODUCTION_URL = "https://theguiderai.dpdns.org"
 npm run android:sync
 npm run android:build
 ```
