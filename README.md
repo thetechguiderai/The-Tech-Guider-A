@@ -15,16 +15,16 @@ The local server runs on port 3000. Configure server-only secrets in a local `.e
 
 Set `TG_PRODUCTION_URL` to the HTTPS URL of the deployed web application (for example, the production Netlify URL). Desktop and Android release builds use this URL and must never use localhost. `APP_URL` remains the canonical server URL for OAuth callback construction.
 
-## Windows MSI
+## Windows NSIS installer
 
 ```powershell
 $env:TG_PRODUCTION_URL = "https://your-production-domain.example"
-npm run desktop:msi
+npm run desktop:nsis
 ```
 
-This creates a real x64 MSI in `release/`. The build-time script injects the non-secret production URL into the packaged Electron app. Development mode (`npm run desktop`) continues to run the local server.
+This creates a real x64 NSIS `.exe` installer in `release/`. The build-time script injects the non-secret production URL into the packaged Electron app. Development mode (`npm run desktop`) continues to run the local server.
 
-Windows prerequisites: Node.js, npm, and the Electron/electron-builder dependencies installed by `npm install`. Building an MSI must be done on Windows.
+Windows prerequisites: Node.js, npm, and the Electron/electron-builder dependencies installed by `npm install`. Building an NSIS installer must be done on Windows.
 
 ## Android APK
 

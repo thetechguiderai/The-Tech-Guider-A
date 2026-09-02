@@ -11,8 +11,8 @@
     "vercel-build": "node scripts/vercel-build.mjs",
     "desktop": "electron .",
     "desktop:build": "node desktop/prepare-production.cjs && electron-builder --win nsis --x64",
-    "desktop:msi": "npm run desktop:build",
-    "package:msi": "npm run desktop:msi",
+    "desktop:nsis": "npm run desktop:build",
+    "package:nsis": "npm run desktop:nsis",
     "android:sync": "npx cap sync android",
     "android:build": "cd android && gradlew.bat assembleRelease",
     "ios:sync": "npx cap sync ios"
@@ -44,6 +44,7 @@
       "icon": "Public/logo.png"
     },
     "nsis": {
+      "artifactName": "The-Tech-Guider-AI-Setup-${version}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
@@ -51,7 +52,7 @@
     }
   },
   "dependencies": {
-    "@capacitor/core": "^7.4.3",
+    "@capacitor/core": "^7.6.9",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -62,8 +63,8 @@
     "serverless-http": "^3.2.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^7.4.3",
-    "@capacitor/cli": "^7.4.3",
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/cli": "^7.6.9",
     "@capacitor/ios": "^7.4.3",
     "electron": "^37.2.6",
     "electron-builder": "^26.0.12",

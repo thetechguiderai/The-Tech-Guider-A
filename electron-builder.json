@@ -18,15 +18,17 @@
   "win": {
     "target": [
       {
-        "target": "msi",
+          "target": "nsis",
         "arch": ["x64"]
       }
     ],
     "icon": "Public/logo.png"
   },
-  "msi": {
+  "nsis": {
+    "artifactName": "The-Tech-Guider-AI-Setup-${version}.${ext}",
     "oneClick": false,
-    "perMachine": false,
-    "runAfterFinish": true
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
   }
 }

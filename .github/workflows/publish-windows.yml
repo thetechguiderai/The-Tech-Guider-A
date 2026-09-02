@@ -1,0 +1,30 @@
+name: Publish Windows installer
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    env:
+      # Configure this repository variable with the deployed HTTPS website URL.
+      TG_PRODUCTION_URL: ${{ vars.TG_PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run desktop:nsis
+      - name: Create GitHub release and upload installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: gh release create $env:GITHUB_REF_NAME release/The-Tech-Guider-AI-Setup-*.exe --generate-notes
